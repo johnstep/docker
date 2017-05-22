@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -314,7 +315,6 @@ func (s *DockerSwarmSuite) OnTimeout(c *check.C) {
 }
 
 func (s *DockerSwarmSuite) SetUpTest(c *check.C) {
-	testRequires(c, DaemonIsLinux)
 }
 
 func (s *DockerSwarmSuite) AddDaemon(c *check.C, joinSwarm, manager bool) *daemon.Swarm {
@@ -325,7 +325,10 @@ func (s *DockerSwarmSuite) AddDaemon(c *check.C, joinSwarm, manager bool) *daemo
 		Port: defaultSwarmPort + s.portIndex,
 	}
 	d.ListenAddr = fmt.Sprintf("0.0.0.0:%d", d.Port)
-	args := []string{"--iptables=false", "--swarm-default-advertise-addr=lo"} // avoid networking conflicts
+	args := []string{}
+	if runtime.GOOS != "windows" {
+		args = append(args, "--iptables=false", "--swarm-default-advertise-addr=lo") // avoid networking conflicts
+	}
 	d.StartWithBusybox(c, args...)
 
 	if joinSwarm == true {
@@ -353,7 +356,6 @@ func (s *DockerSwarmSuite) AddDaemon(c *check.C, joinSwarm, manager bool) *daemo
 }
 
 func (s *DockerSwarmSuite) TearDownTest(c *check.C) {
-	testRequires(c, DaemonIsLinux)
 	s.daemonsLock.Lock()
 	for _, d := range s.daemons {
 		if d != nil {
