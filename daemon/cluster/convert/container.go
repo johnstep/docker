@@ -55,6 +55,8 @@ func containerSpecFromGRPC(c *swarmapi.ContainerSpec) *types.ContainerSpec {
 				containerSpec.Privileges.CredentialSpec.File = c.Privileges.CredentialSpec.GetFile()
 			case *swarmapi.Privileges_CredentialSpec_Registry:
 				containerSpec.Privileges.CredentialSpec.Registry = c.Privileges.CredentialSpec.GetRegistry()
+			case *swarmapi.Privileges_CredentialSpec_Config:
+				containerSpec.Privileges.CredentialSpec.Config = c.Privileges.CredentialSpec.GetConfig()
 			}
 		}
 
@@ -252,20 +254,35 @@ func containerToGRPC(c *types.ContainerSpec) (*swarmapi.ContainerSpec, error) {
 
 		if c.Privileges.CredentialSpec != nil {
 			containerSpec.Privileges.CredentialSpec = &swarmapi.Privileges_CredentialSpec{}
+			onlyOne := true
 
-			if c.Privileges.CredentialSpec.File != "" && c.Privileges.CredentialSpec.Registry != "" {
-				return nil, errors.New("cannot specify both \"file\" and \"registry\" credential specs")
-			}
 			if c.Privileges.CredentialSpec.File != "" {
-				containerSpec.Privileges.CredentialSpec.Source = &swarmapi.Privileges_CredentialSpec_File{
-					File: c.Privileges.CredentialSpec.File,
+				if c.Privileges.CredentialSpec.Registry != "" || c.Privileges.CredentialSpec.Config != "" {
+					onlyOne = false
+				} else {
+					containerSpec.Privileges.CredentialSpec.Source = &swarmapi.Privileges_CredentialSpec_File{
+						File: c.Privileges.CredentialSpec.File,
+					}
 				}
 			} else if c.Privileges.CredentialSpec.Registry != "" {
-				containerSpec.Privileges.CredentialSpec.Source = &swarmapi.Privileges_CredentialSpec_Registry{
-					Registry: c.Privileges.CredentialSpec.Registry,
+				if c.Privileges.CredentialSpec.Config != "" {
+					onlyOne = false
+				} else {
+					containerSpec.Privileges.CredentialSpec.Source = &swarmapi.Privileges_CredentialSpec_Registry{
+						Registry: c.Privileges.CredentialSpec.Registry,
+					}
 				}
+
+			} else if c.Privileges.CredentialSpec.Config != "" {
+				containerSpec.Privileges.CredentialSpec.Source = &swarmapi.Privileges_CredentialSpec_Config{
+					Config: c.Privileges.CredentialSpec.Config,
+				}
+
 			} else {
-				return nil, errors.New("must either provide \"file\" or \"registry\" for credential spec")
+				return nil, errors.New("must either provide \"file\", \"registry\", or \"config\" for credential spec")
+			}
+			if !onlyOne {
+				return nil, errors.New("must specify only one of \"file\", \"registry\", or \"config\" for credential spec")
 			}
 		}
 

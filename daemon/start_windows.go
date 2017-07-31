@@ -135,8 +135,15 @@ func (daemon *Daemon) getLibcontainerdCreateOptions(container *container.Contain
 				if credentialsOpts.Credentials, err = readCredentialSpecRegistry(container.ID, csValue); err != nil {
 					return nil, err
 				}
+			} else if match, csValue = getCredentialSpec("config://", splitsOpt[1]); match {
+				if csValue == "" {
+					return nil, fmt.Errorf("no value supplied for config:// credential spec security option")
+				}
+				if credentialsOpts.Credentials, err = readCredentialSpecConfig(container.ID, daemon, csValue); err != nil {
+					return nil, err
+				}
 			} else {
-				return nil, fmt.Errorf("invalid credential spec security option - value must be prefixed file:// or registry:// followed by a value")
+				return nil, fmt.Errorf("invalid credential spec security option - value must be prefixed file://, registry://, or config:// followed by a value")
 			}
 			createOptions = append(createOptions, credentialsOpts)
 		}
@@ -211,4 +218,15 @@ func readCredentialSpecFile(id, root, location string) (string, error) {
 		return "", fmt.Errorf("credential spec '%s' for container %s as the file could not be read: %q", full, id, err)
 	}
 	return string(bcontents[:]), nil
+}
+
+// readCredentialSpecConfig is a helper function to read a credential spec from
+// a configuration file. If not found, we return an empty string and warn in the log.
+// This allows for staging on machines which do not have the necessary components.
+func readCredentialSpecConfig(id string, daemon *Daemon, name string) (string, error) {
+	config, err := daemon.GetCluster().GetConfig(name)
+	if err != nil {
+		return "", fmt.Errorf("error %v getting config %s", err, name)
+	}
+	return string(config.Spec.Data), nil
 }

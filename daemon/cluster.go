@@ -2,6 +2,7 @@ package daemon
 
 import (
 	apitypes "github.com/docker/docker/api/types"
+	swarmtypes "github.com/docker/docker/api/types/swarm"
 	lncluster "github.com/docker/libnetwork/cluster"
 )
 
@@ -10,6 +11,7 @@ type Cluster interface {
 	ClusterStatus
 	NetworkManager
 	SendClusterEvent(event lncluster.ConfigEventType)
+	GetConfig(input string) (swarmtypes.Config, error)
 }
 
 // ClusterStatus interface provides information about the Swarm status of the Cluster

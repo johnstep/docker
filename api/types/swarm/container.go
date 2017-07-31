@@ -35,6 +35,7 @@ type SELinuxContext struct {
 type CredentialSpec struct {
 	File     string
 	Registry string
+	Config   string
 }
 
 // Privileges defines the security options for the container.
