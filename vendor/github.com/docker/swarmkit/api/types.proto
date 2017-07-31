@@ -1015,6 +1015,7 @@ message Privileges {
 		oneof source {
 			string file = 1;
 			string registry = 2;
+			string config = 3;
 		}
 	}
 	CredentialSpec credential_spec = 1;
